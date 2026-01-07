@@ -19,6 +19,7 @@ interface Product {
   category: string | null
   unit: string
   unitPrice: number
+  isActive: boolean
 }
 
 interface LineItem {

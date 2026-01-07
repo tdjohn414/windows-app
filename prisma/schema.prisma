@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int        @id @default(autoincrement())
+  email           String     @unique
+  passwordHash    String     @map("password_hash")
+  companyName     String     @map("company_name")
+  companyAddress  String?    @map("company_address")
+  companyPhone    String?    @map("company_phone")
+  companyEmail    String?    @map("company_email")
+  logoUrl         String?    @map("logo_url")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  
+  customers       Customer[]
+  products        Product[]
+  estimates       Estimate[]
+  
+  @@map("users")
+}
+
+model Customer {
+  id          Int        @id @default(autoincrement())
+  userId      Int        @map("user_id")
+  name        String
+  email       String?
+  phone       String?
+  address     String?
+  city        String?
+  state       String?
+  zip         String?
+  notes       String?
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  estimates   Estimate[]
+  
+  @@map("customers")
+}
+
+model Product {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  name          String
+  description   String?
+  category      String?  // "Window", "Door", "Labor", "Material", etc.
+  unit          String   @default("ea") // ea, sq ft, ln ft, hr, etc.
+  unitPrice     Decimal  @map("unit_price") @db.Decimal(10, 2)
+  cost          Decimal? @db.Decimal(10, 2) // Your cost (optional)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lineItems     EstimateLineItem[]
+  
+  @@map("products")
+}
+
+model Estimate {
+  id            Int        @id @default(autoincrement())
+  userId        Int        @map("user_id")
+  customerId    Int        @map("customer_id")
+  estimateNumber String    @unique @map("estimate_number")
+  status        String     @default("draft") // draft, sent, accepted, declined
+  jobStatus     String     @default("quote") @map("job_status") // quote, sold, scheduled, in_progress, completed, paid
+  jobAddress    String?    @map("job_address")
+  jobCity       String?    @map("job_city")
+  jobState      String?    @map("job_state")
+  jobZip        String?    @map("job_zip")
+  subtotal      Decimal    @db.Decimal(10, 2)
+  taxRate       Decimal?   @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount     Decimal?   @map("tax_amount") @db.Decimal(10, 2)
+  total         Decimal    @db.Decimal(10, 2)
+  notes         String?
+  validUntil    DateTime?  @map("valid_until")
+  scheduledDate DateTime?  @map("scheduled_date")
+  completedDate DateTime?  @map("completed_date")
+  paidDate      DateTime?  @map("paid_date")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer      Customer   @relation(fields: [customerId], references: [id])
+  lineItems     EstimateLineItem[]
+  
+  @@map("estimates")
+}
+
+model EstimateLineItem {
+  id          Int      @id @default(autoincrement())
+  estimateId  Int      @map("estimate_id")
+  productId   Int?     @map("product_id")
+  description String
+  quantity    Decimal  @db.Decimal(10, 2)
+  unit        String   @default("ea")
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(10, 2)
+  total       Decimal  @db.Decimal(10, 2)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  estimate    Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  
+  @@map("estimate_line_items")
+}
